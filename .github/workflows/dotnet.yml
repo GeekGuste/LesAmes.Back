@@ -1,0 +1,43 @@
+# This workflow will build a .NET project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-net
+
+name: .NET
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  APP_NAME: lesames-api
+  IMAGE_TAG: ${{ github.sha }}
+  IMAGE_NAME: lesames:${{ github.sha }}  # tag local dans le tar
+  DOCKERFILE_PATH: ./Dockerfile          # adapte si besoin
+  CONTEXT_PATH: .                        # racine du repo
+  INTERNAL_PORT: 8080                    # port exposé DANS le conteneur
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build (load image locally on runner)
+      uses: docker/build-push-action@v6
+#      with:
+#          context: ${{ env.CONTEXT_PATH }}
+#          file: ${{ env.DOCKERFILE_PATH }}
+#          platforms: linux/amd64
+#          load: true              # charge l'image en local (pas de push registry)
+#          tags: ${{ env.IMAGE_NAME }}
+    
+    - name: Build Docker image
+      run: docker build -t lesames-api-app -f LesAmes.WebApi/Dockerfile .
+    - name: Save Docker image
+      run: docker save lesames-api-app -o reseau-api-app.tar
