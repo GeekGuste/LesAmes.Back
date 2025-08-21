@@ -13,7 +13,7 @@ env:
   APP_NAME: lesames-api
   IMAGE_TAG: ${{ github.sha }}
   IMAGE_NAME: lesames:${{ github.sha }}  # tag local dans le tar
-  DOCKERFILE_PATH: ./Dockerfile          # adapte si besoin
+  DOCKERFILE_PATH: ./LesAmes.WebApi/Dockerfile          # adapte si besoin
   CONTEXT_PATH: .                        # racine du repo
   INTERNAL_PORT: 8080                    # port exposé DANS le conteneur
 
@@ -30,14 +30,57 @@ jobs:
 
     - name: Build (load image locally on runner)
       uses: docker/build-push-action@v6
-#      with:
-#          context: ${{ env.CONTEXT_PATH }}
-#          file: ${{ env.DOCKERFILE_PATH }}
-#          platforms: linux/amd64
-#          load: true              # charge l'image en local (pas de push registry)
-#          tags: ${{ env.IMAGE_NAME }}
-    
-    - name: Build Docker image
-      run: docker build -t lesames-api-app -f LesAmes.WebApi/Dockerfile .
-    - name: Save Docker image
-      run: docker save lesames-api-app -o reseau-api-app.tar
+      with:
+          context: ${{ env.CONTEXT_PATH }}
+          file: ${{ env.DOCKERFILE_PATH }}
+          platforms: linux/amd64
+          load: true              # charge l'image en local (pas de push registry)
+          tags: ${{ env.IMAGE_NAME }}
+     
+    - name: Save image to tar
+      run: docker save ${{ env.IMAGE_NAME }} -o lesames-image.tar
+
+    - name: Copy tar to VPS
+      uses: appleboy/scp-action@v0.1.7
+      with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: "lesames-image.tar"
+          target: ${{ secrets.VPS_APP_DIR }} 
+
+    - name: Load & (re)start container on VPS
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -e
+            APP_DIR="${{ secrets.VPS_APP_DIR }}"
+            APP_NAME="${{ env.APP_NAME }}"
+            IMAGE_NAME="${{ env.IMAGE_NAME }}"
+            INTERNAL_PORT="${{ env.INTERNAL_PORT }}"
+            EXTERNAL_PORT="${{ secrets.VPS_PORT || '8080' }}"
+
+            mkdir -p "$APP_DIR"
+            docker load -i "$APP_DIR/lesames-image.tar"
+
+            # Arrêt/cleanup (sans casser si absent)
+            docker rm -f "$APP_NAME" >/dev/null 2>&1 || true
+
+            # Lancement (utilise un .env déjà présent sur le VPS si tu en as un)
+            if [ -f "$APP_DIR/.env" ]; then
+              docker run -d --name "$APP_NAME" --restart unless-stopped \
+                --env-file "$APP_DIR/.env" \
+                -p ${EXTERNAL_PORT}:${INTERNAL_PORT} \
+                "$IMAGE_NAME"
+            else
+              docker run -d --name "$APP_NAME" --restart unless-stopped \
+                -p ${EXTERNAL_PORT}:${INTERNAL_PORT} \
+                "$IMAGE_NAME"
+            fi
+
+            # Nettoyage
+            rm -f "$APP_DIR/lesames-image.tar"
+            docker image prune -f
