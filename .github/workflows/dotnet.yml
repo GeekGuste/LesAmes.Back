@@ -51,8 +51,9 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          source: "${{ github.workspace }}/lesames-image.tar"
+          source: "lesames-image.tar"            # <= chemin relatif
           target: ${{ secrets.VPS_APP_DIR }} 
+          working-directory: ${{ github.workspace }} # <= important
 
     - name: Load & (re)start container on VPS
       uses: appleboy/ssh-action@v1.0.3
