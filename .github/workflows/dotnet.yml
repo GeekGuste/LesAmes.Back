@@ -54,40 +54,38 @@ jobs:
           source: "${{ github.workspace }}/lesames-image.tar"
           target: ${{ secrets.VPS_APP_DIR }} 
 
-
     - name: Load & (re)start container on VPS
       uses: appleboy/ssh-action@v1.0.3
       with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          target: ${{ secrets.VPS_APP_DIR }}
-          script: |
-            set -e
-            APP_DIR="${{ secrets.VPS_APP_DIR }}"
-            APP_NAME="${{ env.APP_NAME }}"
-            IMAGE_NAME="${{ env.IMAGE_NAME }}"
-            INTERNAL_PORT="${{ env.INTERNAL_PORT }}"
-            EXTERNAL_PORT="${{ secrets.VPS_PORT || '8080' }}"
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USER }}
+        port: ${{ secrets.VPS_PORT }}
+        key: ${{ secrets.VPS_SSH_KEY }}
+        script: |
+          set -e
+          APP_DIR="${{ secrets.VPS_APP_DIR }}"
+          APP_NAME="${{ env.APP_NAME }}"
+          IMAGE_NAME="${{ env.IMAGE_NAME }}"
+          INTERNAL_PORT="${{ env.INTERNAL_PORT }}"
+          EXTERNAL_PORT="${{ secrets.VPS_EXPOSED_PORT || '8080' }}"
 
-            mkdir -p "$APP_DIR"
-            docker load -i "$APP_DIR/lesames-image.tar"
+          mkdir -p "$APP_DIR"
+          docker load -i "$APP_DIR/lesames-image.tar" 
 
-            # Arrêt/cleanup (sans casser si absent)
-            docker rm -f "$APP_NAME" >/dev/null 2>&1 || true
+          # stop & remove if exists
+          docker rm -f "$APP_NAME" >/dev/null 2>&1 || true
 
-            # Lancement (utilise un .env déjà présent sur le VPS si tu en as un)
-            if [ -f "$APP_DIR/.env" ]; then
-              docker run -d --name "$APP_NAME" --restart unless-stopped \
-                --env-file "$APP_DIR/.env" \
-                -p ${EXTERNAL_PORT}:${INTERNAL_PORT} \
-                "$IMAGE_NAME"
-            else
-              docker run -d --name "$APP_NAME" --restart unless-stopped \
-                -p ${EXTERNAL_PORT}:${INTERNAL_PORT} \
-                "$IMAGE_NAME"
-            fi
+          # run with env file if present
+          if [ -f "$APP_DIR/.env" ]; then
+            docker run -d --name "$APP_NAME" --restart unless-stopped \
+              --env-file "$APP_DIR/.env" \
+              -p ${EXTERNAL_PORT}:${INTERNAL_PORT} \
+              "$IMAGE_NAME"
+          else
+            docker run -d --name "$APP_NAME" --restart unless-stopped \
+              -p ${EXTERNAL_PORT}:${INTERNAL_PORT} \
+              "$IMAGE_NAME"
+          fi
 
-            # Nettoyage
-            rm -f "$APP_DIR/lesames-image.tar"
-            docker image prune -f
+          rm -f "$APP_DIR/lesames-image.tar"
+          docker image prune -f
