@@ -49,12 +49,19 @@ jobs:
           source: "lesames-image.tar"
           target: ${{ secrets.VPS_APP_DIR }} 
 
+    - name: Verify and chmod
+      run: |
+        ls -l ${{ github.workspace }}/lesames-image.tar
+        chmod 644 ${{ github.workspace }}/lesames-image.tar
+
     - name: Load & (re)start container on VPS
       uses: appleboy/ssh-action@v1.0.3
       with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          source: "${{ github.workspace }}/lesames-image.tar"   # <— chemin ABSOLU
+          target: ${{ secrets.VPS_APP_DIR }}
           script: |
             set -e
             APP_DIR="${{ secrets.VPS_APP_DIR }}"
