@@ -42,8 +42,8 @@ jobs:
 
     - name: Verify and chmod
       run: |
-      ls -l ${{ github.workspace }}/lesames-image.tar
-      chmod 644 ${{ github.workspace }}/lesames-image.tar
+        ls -l ${{ github.workspace }}/lesames-image.tar
+        chmod 644 ${{ github.workspace }}/lesames-image.tar
 
     - name: Copy tar to VPS
       uses: appleboy/scp-action@v0.1.7
