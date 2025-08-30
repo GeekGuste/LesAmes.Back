@@ -135,6 +135,12 @@ public class UserServiceIdentity : IUserService
         return await _userManager.UpdateAsync(user);
     }
 
+    public async Task<string[]> GetRolesAsync()
+    {
+        var roles = await _roleManager.Roles.Select(r => r.Name).ToArrayAsync();
+        return roles;
+    }
+
     public async Task<IdentityResult> ChangePasswordAsync(string id, string newPassword)
     {
         var user = await GetByIdAsync(id);

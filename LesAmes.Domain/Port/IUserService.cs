@@ -16,4 +16,5 @@ public interface IUserService
     Task<IdentityResult> EnableAsync(string id);
     Task<IdentityResult> AddRoleAsync(string id, string role);
     Task<IdentityResult> RemoveRoleAsync(string id, string role);
+    Task<string[]> GetRolesAsync();
 }

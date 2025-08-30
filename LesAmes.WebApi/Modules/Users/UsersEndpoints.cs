@@ -52,6 +52,14 @@ public static class UsersEndpoints
         })
         .WithDisplayName("UpdateUser");
 
+        app.MapGet("/roles",
+        [Authorize(Roles = $"{Roles.Admin},{Roles.SuperAdmin}")]
+        async (UserService userService) =>
+        {
+            return await userService.GetRolesAsync();
+        })
+        .WithDisplayName("DisplayAllRoles");
+
         app.MapPut("/users/{id}/password",
         [Authorize(Roles = $"{Roles.Admin},{Roles.SuperAdmin}")]
         async (UserService userService, string id, ChangePasswordDto dto) =>

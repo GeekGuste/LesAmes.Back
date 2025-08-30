@@ -71,6 +71,12 @@ public class UserService : LesAmesApiService
         return UpdateUserAsync(CurrentUserId, updateUserDto);
     }
 
+    public Task<string[]> GetRolesAsync()
+    {
+        return _userService.GetRolesAsync();
+    }
+
+
     public Task<IdentityResult> UpdateUserAsync(string userId, UpdateUserDto updateUserDto)
     {
         if (updateUserDto == null)
